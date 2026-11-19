@@ -1,3 +1,32 @@
+*.fbx
+*.obj
+*.blend
+*.dae
+*.3ds
+*.max
+*.png
+*.jpg
+*.jpeg
+*.tga
+*.psd
+*.tif
+*.tiff
+*.exr
+*.hdr
+*.wav
+*.mp3
+*.ogg
+*.aif
+*.aiff
+*.mp4
+*.mov
+*.avi
+*.webm
+*.ttf
+*.otf
+*.zip
+*.7z
+*.unitypackage filter=lfs diff=lfs merge=lfs -text
 *.fbx filter=lfs diff=lfs merge=lfs -text
 *.png filter=lfs diff=lfs merge=lfs -text
 *.jpg filter=lfs diff=lfs merge=lfs -text
