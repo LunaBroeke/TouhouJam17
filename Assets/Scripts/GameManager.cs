@@ -1,3 +1,4 @@
+using System.Collections;
 using UnityEngine;
 using UnityEngine.InputSystem;
 public enum GameState
@@ -68,15 +69,20 @@ public class GameManager : MonoBehaviour
     {
         State = GameState.Game;
 		targetObjs = GameObject.FindGameObjectsWithTag("fumo");
-        target = SetTargetRandom();
-        foreach (GameObject _obj in targetObjs)
-        {
-            TargetObject _targetObj = _obj.GetComponent<TargetObject>();
-            _targetObj.RandomizeStart();
-            _obj.SetActive(true);
-        }
-        int i = Random.Range(0, targetObjs.Length);
-        targetObjs[i].GetComponent<TargetObject>().ForceTarget(target);
+        StartRound();
+	}
+    public void StartRound()
+    {
+		target = SetTargetRandom();
+		foreach (GameObject _obj in targetObjs)
+		{
+			TargetObject _targetObj = _obj.GetComponent<TargetObject>();
+			_targetObj.RandomizeStart();
+			_obj.SetActive(true);
+		}
+		int i = Random.Range(0, targetObjs.Length);
+		targetObjs[i].GetComponent<TargetObject>().ForceTarget(target);
+        EnableGameInput();
 	}
     public void ConfirmCheck(InputAction.CallbackContext context)
     {
@@ -108,6 +114,8 @@ public class GameManager : MonoBehaviour
     {
         SoundManager sound = SoundManager.instance;
         sound.PlaySound(sound.jingleSuccess);
+        score += 1;
+        StartCoroutine(StartNextRound());
     }
     private void WrongTarget()
     {
@@ -117,6 +125,18 @@ public class GameManager : MonoBehaviour
     {
         int i = Random.Range(1, 9);
         return (Target)i;
+    }
+    private IEnumerator StartNextRound()
+    {
+        DisableGameInput();
+        foreach (GameObject _obj in targetObjs)
+        {
+            if (_obj.GetComponent<TargetObject>().isIt) continue;
+            _obj.SetActive(false);
+        }
+        yield return new WaitForSeconds(2f);
+        StartRound();
+        yield return new WaitForEndOfFrame();
     }
     public void EnableGameInput()
     {
@@ -128,12 +148,4 @@ public class GameManager : MonoBehaviour
         inputActions.Player.Confirm.performed -= ConfirmCheck;
         inputActions.Player.Disable();
     }
-	private void OnDisable()
-	{
-		DisableGameInput();
-	}
-	private void OnEnable()
-	{
-		EnableGameInput();
-	}
 }
