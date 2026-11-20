@@ -27,6 +27,7 @@ public class GameManager : MonoBehaviour
     public static GameManager instance;
     [Header("Gameplay Tracking")]
     public Target target = Target.None;
+    public GameObject[] targetObjs;
     [Header("State Tracking")]
     public GameState State = GameState.None;
     [Header("Score Tracking")]
@@ -37,6 +38,8 @@ public class GameManager : MonoBehaviour
     public Vector2 mouseWorldPosition;
     private PlayerInput inputActions;
     [SerializeField] private LayerMask layerMask;
+    [Header("SpriteList")]
+    public Sprite[] sprite;
 
 	private void Awake()
 	{
@@ -60,10 +63,21 @@ public class GameManager : MonoBehaviour
             mouseWorldPosition = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
         }
 	}
+    [ContextMenu("Start Game")]
 	public void StartGame()
     {
         State = GameState.Game;
-    }
+		targetObjs = GameObject.FindGameObjectsWithTag("fumo");
+        target = SetTargetRandom();
+        foreach (GameObject _obj in targetObjs)
+        {
+            TargetObject _targetObj = _obj.GetComponent<TargetObject>();
+            _targetObj.RandomizeStart();
+            _obj.SetActive(true);
+        }
+        int i = Random.Range(0, targetObjs.Length);
+        targetObjs[i].GetComponent<TargetObject>().ForceTarget(target);
+	}
     public void ConfirmCheck(InputAction.CallbackContext context)
     {
         if (Mouse.current == null) return;
@@ -98,6 +112,11 @@ public class GameManager : MonoBehaviour
     private void WrongTarget()
     {
 
+    }
+    public Target SetTargetRandom()
+    {
+        int i = Random.Range(1, 9);
+        return (Target)i;
     }
     public void EnableGameInput()
     {
