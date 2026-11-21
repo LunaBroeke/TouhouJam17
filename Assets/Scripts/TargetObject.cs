@@ -22,6 +22,7 @@ public class TargetObject : MonoBehaviour
 	}
 	public void SetSprite()
 	{
+		gameObject.name = target.ToString();
 		SpriteRenderer _spriteRender = GetComponent<SpriteRenderer>();
 		_spriteRender.sprite = GameManager.instance.sprite[(int)target];
 	}

@@ -1,4 +1,6 @@
 using System.Collections;
+using System.Collections.Generic;
+using Unity.VisualScripting;
 using UnityEngine;
 using UnityEngine.InputSystem;
 public enum GameState
@@ -27,10 +29,19 @@ public class GameManager : MonoBehaviour
 {
     public static GameManager instance;
     [Header("Gameplay Tracking")]
+    public int amountToSpawnOnStart = 100;
     public Target target = Target.None;
-    public GameObject[] targetObjs;
+    public GameObject targetPrefab;
+    public List<GameObject> targetObjs;
+    public List<GameObject> activeObjs;
+    public List<GameObject> inactiveObjs;
+    [Header("Field Management")]
+    public Field activeField;
+    public Field[] fields;
     [Header("State Tracking")]
-    public GameState State = GameState.None;
+    public GameState state = GameState.None;
+    public float timer = 60f;
+    public bool countTimer = false;
     [Header("Score Tracking")]
     public int score = 0;
     public int[] hiscore = new int[5] {0,0,0,0,0};
@@ -63,25 +74,38 @@ public class GameManager : MonoBehaviour
             mouseScreenPosition = Mouse.current.position.ReadValue();
             mouseWorldPosition = Camera.main.ScreenToWorldPoint(mouseScreenPosition);
         }
+        if (countTimer && state == GameState.Game)
+        {
+            timer -= Time.deltaTime;
+        }
+        if (timer <= 0 && state == GameState.Game)
+        {
+            EndGame();
+        }
 	}
     [ContextMenu("Start Game")]
 	public void StartGame()
     {
-        State = GameState.Game;
-		targetObjs = GameObject.FindGameObjectsWithTag("fumo");
+        for (int i = 0; i < amountToSpawnOnStart; i++)
+        {
+            GameObject _go = Instantiate(targetPrefab);
+            targetObjs.Add(_go);
+            SetObjectInactive(_go);
+        }
+        state = GameState.Game;
         StartRound();
 	}
+    private void EndGame()
+    {
+        state = GameState.End;
+        DisableGameInput();
+    }
     public void StartRound()
     {
 		target = SetTargetRandom();
-		foreach (GameObject _obj in targetObjs)
-		{
-			TargetObject _targetObj = _obj.GetComponent<TargetObject>();
-			_targetObj.RandomizeStart();
-			_obj.SetActive(true);
-		}
-		int i = Random.Range(0, targetObjs.Length);
-		targetObjs[i].GetComponent<TargetObject>().ForceTarget(target);
+        activeField.Place();
+		int i = Random.Range(0, activeObjs.Count);
+		activeObjs[i].GetComponent<TargetObject>().ForceTarget(target);
         EnableGameInput();
 	}
     public void ConfirmCheck(InputAction.CallbackContext context)
@@ -119,7 +143,7 @@ public class GameManager : MonoBehaviour
     }
     private void WrongTarget()
     {
-
+        timer -= 2;
     }
     public Target SetTargetRandom()
     {
@@ -128,15 +152,44 @@ public class GameManager : MonoBehaviour
     }
     private IEnumerator StartNextRound()
     {
+        if (state != GameState.Game) yield break;
         DisableGameInput();
-        foreach (GameObject _obj in targetObjs)
+        countTimer = false;
+        GameObject _isIt = null;
+        List<GameObject> _activeObjs = new List<GameObject>(activeObjs);
+        foreach (GameObject _obj in _activeObjs)
         {
-            if (_obj.GetComponent<TargetObject>().isIt) continue;
-            _obj.SetActive(false);
+            if (_obj.GetComponent<TargetObject>().isIt)
+            {
+                _isIt = _obj;
+                continue;
+            }
+            SetObjectInactive(_obj);
         }
+        Debug.Log($"IsIt is {_isIt.name}");
         yield return new WaitForSeconds(2f);
+        StartCoroutine(AddTimeOverTime(5, 0.25f));
+        yield return new WaitForSeconds(1f);
+        SetObjectInactive(_isIt);
         StartRound();
+        countTimer = true;
         yield return new WaitForEndOfFrame();
+    }
+    private IEnumerator AddTimeOverTime(float bonusTime, float duration)
+    {
+        float elapsed = 0f;
+        float addedSoFar = 0f;
+        while (elapsed < duration)
+        {
+            elapsed += Time.deltaTime;
+            float t = Mathf.Clamp01(elapsed / duration);
+            float targetAdded = Mathf.Lerp(0f, bonusTime, t);
+            float deltaThisFrame = targetAdded - addedSoFar;
+
+            timer += deltaThisFrame;
+            addedSoFar = targetAdded;
+            yield return null;
+        }
     }
     public void EnableGameInput()
     {
@@ -147,5 +200,19 @@ public class GameManager : MonoBehaviour
     {
         inputActions.Player.Confirm.performed -= ConfirmCheck;
         inputActions.Player.Disable();
+    }
+    public void SetObjectInactive(GameObject obj)
+    {
+        if (inactiveObjs.Contains(obj)) return;
+        activeObjs.Remove(obj);
+        inactiveObjs.Add(obj);
+        obj.SetActive(false);
+    }
+    public void SetObjectActive(GameObject obj)
+    {
+        if (activeObjs.Contains(obj)) return;
+        inactiveObjs.Remove(obj);
+        activeObjs.Add(obj);
+        obj.SetActive(true);
     }
 }
